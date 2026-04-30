@@ -1,3 +1,5 @@
+import { fetchAssets, fetchUser, api } from "../api";
+
 document.getElementById('app').insertAdjacentHTML('beforeend', `
 <div class="screen" id="s5">
   <div class="sidebar">
@@ -46,9 +48,9 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
     </div>
     <div class="sb-footer">
       <div class="sb-user">
-        <div class="sb-avatar">AN</div>
+        <div class="sb-avatar">--</div>
         <div>
-          <div class="sb-user-name">Aziz Nadaf</div>
+          <div class="sb-user-name">Guest User</div>
           <div class="sb-user-role">Creator · Verified</div>
         </div>
       </div>
@@ -85,53 +87,82 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
 
 window.toggleMoreInfo = function (index) {
   const el = document.getElementById('more-info-' + index);
-  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 };
 
-window.renderMyProperty = function () {
+window.deleteAsset = async function (id) {
+  if (!confirm("Are you sure you want to delete this asset? This action cannot be undone.")) return;
+
+  try {
+    await api(`/api/assets/${id}`, {
+      method: "DELETE"
+    });
+    alert("Asset deleted successfully.");
+    if (window.refreshUserAssets) {
+      await window.refreshUserAssets();
+    } else {
+      renderMyProperty();
+    }
+  } catch (err) {
+    alert("Failed to delete asset: " + err.message);
+  }
+};
+
+window.renderMyProperty = async function () {
   const container = document.getElementById('property-list');
   if (!container) return;
 
   const query = (document.getElementById('prop-search').value || '').toLowerCase();
   const filter = document.getElementById('prop-filter').value;
 
-  let assets = JSON.parse(localStorage.getItem('creatorChainAssets') || '[]');
+  try {
+    const [assets, user] = await Promise.all([fetchAssets(), fetchUser()]);
+    const currentName = (user && user.name) ? user.name : "Anonymous Creator";
 
-  assets = assets.filter(asset => {
-    const matchesFilter = filter === 'all' || asset.category === filter;
-    const matchesSearch = (asset.title || '').toLowerCase().includes(query) ||
-      (asset.fileName || '').toLowerCase().includes(query);
-    return matchesFilter && matchesSearch;
-  });
+    const filtered = assets.filter(asset => {
+      const matchesFilter = filter === 'all' || asset.category === filter;
+      const matchesSearch = (asset.title || '').toLowerCase().includes(query) ||
+        (asset.fileName || '').toLowerCase().includes(query);
+      return matchesFilter && matchesSearch;
+    });
 
-  if (assets.length === 0) {
-    container.innerHTML = '<div class="card" style="grid-column:1/-1"><div style="text-align:center;color:#888;padding:2rem;">No protected assets found. <button class="btn-primary" style="margin-left:12px" onclick="goTo(\'s4\')">Upload Now</button></div></div>';
-    return;
-  }
+    if (filtered.length === 0) {
+      container.innerHTML = '<div class="card" style="grid-column:1/-1"><div style="text-align:center;color:#888;padding:2rem;">No protected assets found. <button class="btn-primary" style="margin-left:12px" onclick="goTo(\'s4\')">Upload Now</button></div></div>';
+      return;
+    }
 
-  const icons = { movies: '🎬', 'web-series': '📺', anime: '🌸', music: '🎵', docs: '📄' };
+    const icons = { movies: '🎬', 'web-series': '📺', anime: '🌸', music: '🎵', docs: '📄' };
 
-  container.innerHTML = assets.map((asset, i) => `
-    <div class="card" style="display:flex;flex-direction:column;gap:1rem;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-        <div style="width:42px;height:42px;background:linear-gradient(135deg,#E8F4EE,#C8E6D9);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">
-          ${icons[asset.category] || '📁'}
+    container.innerHTML = filtered.map((asset, i) => `
+      <div class="card" style="display:flex;flex-direction:column;gap:1rem;position:relative;">
+        <button class="ov-icon-btn" style="position:absolute;top:10px;right:10px;color:var(--danger);opacity:0.6;" 
+                onclick="deleteAsset('${asset.id}')" title="Delete Asset">
+          <svg viewBox="0 0 16 16" fill="none" style="width:14px;height:14px;">
+            <path d="M2 4h12M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1M3 4l1 10a1 1 0 001 1h6a1 1 0 001-1l1-10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div style="width:42px;height:42px;background:linear-gradient(135deg,#E8F4EE,#C8E6D9);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">
+            ${icons[asset.category] || '📁'}
+          </div>
+          <span class="badge badge-green" style="margin-right:25px;">Protected</span>
         </div>
-        <span class="badge badge-green">Protected</span>
+        <div>
+          <h3 style="margin:0 0 4px;color:var(--ink);font-size:1rem;font-family:'Syne',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${asset.title}">${asset.title}</h3>
+          <div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${asset.fileName}">${asset.fileName}</div>
+        </div>
+        <div id="more-info-${i}" style="display:none;padding-top:0.8rem;border-top:1px solid var(--border);font-size:12.5px;color:var(--ink-soft);line-height:1.6;">
+          <div><strong>Category:</strong> <span style="text-transform:capitalize">${asset.category}</span></div>
+          <div><strong>Description:</strong> ${asset.description || 'No description.'}</div>
+          <div><strong>Registered on:</strong> ${new Date(asset.createdAt).toLocaleDateString()}</div>
+          <div><strong>Owner Name:</strong> ${currentName}</div>
+        </div>
+        <div style="margin-top:auto;">
+          <button class="btn-outline" style="width:100%;justify-content:center;display:flex;font-size:12px;" onclick="toggleMoreInfo(${i})">Toggle Details</button>
+        </div>
       </div>
-      <div>
-        <h3 style="margin:0 0 4px;color:var(--ink);font-size:1rem;font-family:'Syne',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${asset.title}">${asset.title}</h3>
-        <div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${asset.fileName}">${asset.fileName}</div>
-      </div>
-      <div id="more-info-${i}" style="display:none;padding-top:0.8rem;border-top:1px solid var(--border);font-size:12.5px;color:var(--ink-soft);line-height:1.6;">
-        <div><strong>Category:</strong> <span style="text-transform:capitalize">${asset.category}</span></div>
-        <div><strong>Description:</strong> ${asset.desc || 'No description.'}</div>
-        <div><strong>Date:</strong> ${asset.date}</div>
-        <div><strong>Uploader:</strong> ${asset.uploader}</div>
-      </div>
-      <div style="margin-top:auto;">
-        <button class="btn-outline" style="width:100%;justify-content:center;display:flex;font-size:12px;" onclick="toggleMoreInfo(${i})">Toggle Details</button>
-      </div>
-    </div>
-  `).join('');
+    `).join('');
+  } catch (err) {
+    container.innerHTML = `<div class="card" style="grid-column:1/-1"><div style="text-align:center;color:var(--danger);padding:2rem;">Failed to load assets: ${err.message}</div></div>`;
+  }
 };

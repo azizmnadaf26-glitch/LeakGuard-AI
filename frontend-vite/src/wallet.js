@@ -3,6 +3,7 @@
 // ============================================================
 
 import { PeraWalletConnect } from "@perawallet/connect";
+import { api } from "./api";
 
 // Initialize
 const peraWallet = new PeraWalletConnect();
@@ -19,6 +20,20 @@ async function connectWallet() {
     console.log("✅ Connected:", walletAddress);
 
     localStorage.setItem("walletAddress", walletAddress);
+    localStorage.setItem("loginType", "wallet");
+
+    // Sync with backend if user is logged in via Google
+    const email = localStorage.getItem("userEmail");
+    if (email) {
+      try {
+        await api("/api/users/wallet", {
+          method: "PUT",
+          body: JSON.stringify({ email, walletAddress })
+        });
+      } catch (err) {
+        console.warn("Backend sync failed, but wallet is connected locally:", err);
+      }
+    }
 
     if (window.goTo) window.goTo('s3');
 
@@ -40,6 +55,7 @@ async function reconnectSession() {
       console.log("🔄 Reconnected:", walletAddress);
 
       localStorage.setItem("walletAddress", walletAddress);
+      localStorage.setItem("loginType", "wallet");
 
       if (window.goTo) window.goTo('s3');
     }

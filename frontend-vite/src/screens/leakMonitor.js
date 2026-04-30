@@ -52,9 +52,9 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
     </div>
     <div class="sb-footer">
       <div class="sb-user">
-        <div class="sb-avatar">GH</div>
+        <div class="sb-avatar">--</div>
         <div>
-          <div class="sb-user-name">Guru Hugar</div>
+          <div class="sb-user-name">Guest User</div>
           <div class="sb-user-role">Creator · Verified</div>
         </div>
       </div>

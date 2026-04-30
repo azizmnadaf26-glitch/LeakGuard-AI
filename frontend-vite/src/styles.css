@@ -42,6 +42,66 @@ body {
   display: flex;
 }
 
+/* ===== MODAL SYSTEM ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 26, 46, 0.4);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-content {
+  background: var(--ivory);
+  padding: 2rem;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+  transform: translateY(20px);
+  transition: transform 0.3s ease;
+}
+
+.modal-overlay.active .modal-content {
+  transform: translateY(0);
+}
+
+.modal-hdr {
+  margin-bottom: 1rem;
+}
+
+.modal-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.modal-body {
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+
+.modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+
 /* =============================
    SCREEN 1 — SPLASH
 ============================= */
@@ -1394,13 +1454,36 @@ body {
   color: var(--sage);
 }
 .btn-danger {
-  background: #e05252;
-  color: white;
-  border: none;
+  padding: 8px 16px;
+  background: #FFEBEB;
+  color: #E05252;
+  border: 1px solid #FFD1D1;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: 'DM Sans', sans-serif;
 }
 
 .btn-danger:hover {
-  background: #c93c3c;
+  background: #E05252;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(224, 82, 82, 0.2);
+}
+
+.btn-danger svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s ease;
+}
+
+.btn-danger:hover svg {
+  transform: translateX(2px);
 }
 
 .ov-action-icon {

@@ -1,3 +1,5 @@
+import { fetchAssets } from "../api";
+
 document.getElementById('app').insertAdjacentHTML('beforeend', `
 <div class="screen" id="s3">
   <div class="sidebar">
@@ -46,9 +48,9 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
     </div>
     <div class="sb-footer">
       <div class="sb-user">
-        <div class="sb-avatar">GH</div>
+        <div class="sb-avatar">--</div>
         <div>
-          <div class="sb-user-name">Guru Hugar</div>
+          <div class="sb-user-name">Guest User</div>
           <div class="sb-user-role">Creator · Verified</div>
         </div>
       </div>
@@ -59,7 +61,7 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
     <div class="topbar">
       <div>
         <div class="topbar-title">Dashboard</div>
-        <div class="topbar-sub">Welcome back, Guru — 2 active alerts</div>
+        <div class="topbar-sub" id="db-welcome-sub">Welcome back — Monitoring your ecosystem</div>
       </div>
       <div class="topbar-actions">
         <button class="btn-outline">Export Report</button>
@@ -71,10 +73,10 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
     </div>
     <div class="content">
       <div class="stats-row">
-        <div class="stat-card"><div class="stat-label">Protected Assets</div><div class="stat-val green">24</div><div class="stat-sub"><span class="trend-up">↑ 3</span>&nbsp;this week</div></div>
+        <div class="stat-card"><div class="stat-label">Protected Assets</div><div class="stat-val green" id="stat-assets">--</div><div class="stat-sub">active on chain</div></div>
         <div class="stat-card"><div class="stat-label">Leaks Detected</div><div class="stat-val red">7</div><div class="stat-sub"><span class="trend-down">↑ 2</span>&nbsp;new today</div></div>
-        <div class="stat-card"><div class="stat-label">Watermarks Active</div><div class="stat-val">142</div><div class="stat-sub">across 24 files</div></div>
-        <div class="stat-card"><div class="stat-label">Blockchain Records</div><div class="stat-val amber">24</div><div class="stat-sub">on Algorand</div></div>
+        <div class="stat-card"><div class="stat-label">Watermarks Active</div><div class="stat-val" id="stat-wm">--</div><div class="stat-sub" id="stat-wm-sub">across 0 files</div></div>
+        <div class="stat-card"><div class="stat-label">Blockchain Records</div><div class="stat-val amber" id="stat-bc">--</div><div class="stat-sub">on Algorand</div></div>
       </div>
 
       <div class="two-col">
@@ -87,12 +89,12 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
         </div>
         <div class="card">
           <div class="card-hdr"><h3>Watermark Health</h3><span>Active</span></div>
-          <div class="wm-vis"><div class="wm-grid"></div><span class="wm-label">Watermark mesh active · 24 assets</span></div>
+          <div class="wm-vis"><div class="wm-grid"></div><span class="wm-label">Watermark mesh active</span></div>
           <div class="mini-stats">
             <div class="mini-stat green"><div class="mini-stat-val">98%</div><div class="mini-stat-label">Detection Rate</div></div>
             <div class="mini-stat amber"><div class="mini-stat-val">14ms</div><div class="mini-stat-label">Avg Trace Time</div></div>
           </div>
-          <div class="upload-zone">
+          <div class="upload-zone" onclick="goTo('s4')" style="cursor:pointer">
             <div class="upload-icon"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2v9M5 5l3-3 3 3" stroke="#2D6A4F" stroke-width="1.5" stroke-linecap="round"/><path d="M2 13h12" stroke="#2D6A4F" stroke-width="1.5" stroke-linecap="round"/></svg></div>
             <div class="upload-title">Upload to Protect</div>
             <div class="upload-sub">Video, Audio, Image — AI embeds watermark</div>
@@ -115,3 +117,24 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
   </div>
 </div>
 `);
+
+window.refreshDashboard = async function () {
+  try {
+    const assets = await fetchAssets();
+    const count = assets.length;
+
+    // Update stats
+    const sAssets = document.getElementById('stat-assets');
+    const sBc = document.getElementById('stat-bc');
+    const sWm = document.getElementById('stat-wm');
+    const sWmSub = document.getElementById('stat-wm-sub');
+
+    if (sAssets) sAssets.textContent = count;
+    if (sBc) sBc.textContent = count;
+    if (sWm) sWm.textContent = count * 6; // Mock active watermarks
+    if (sWmSub) sWmSub.textContent = `across ${count} files`;
+
+  } catch (err) {
+    console.error("Dashboard refresh failed:", err);
+  }
+};

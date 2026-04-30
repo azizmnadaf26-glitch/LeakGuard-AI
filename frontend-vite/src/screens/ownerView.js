@@ -1,3 +1,5 @@
+import { api, fetchUser, fetchAssets } from "../api";
+
 document.getElementById('app').insertAdjacentHTML('beforeend', `
 <div class="screen" id="s6">
 
@@ -48,9 +50,9 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
     </div>
     <div class="sb-footer">
       <div class="sb-user">
-        <div class="sb-avatar">AN</div>
+        <div class="sb-avatar">--</div>
         <div>
-          <div class="sb-user-name">Aziz Nadaf</div>
+          <div class="sb-user-name">Guest User</div>
           <div class="sb-user-role">Creator · Verified</div>
         </div>
       </div>
@@ -70,9 +72,13 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
           <svg viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
           Upload Content
         </button>
-         <button class="btn-danger" onclick="logoutUser()">
-     Logout
-  </button>
+        <button class="btn-danger" onclick="logoutUser()">
+          <svg viewBox="0 0 16 16" fill="none">
+            <path d="M10 3H13C13.5523 3 14 3.44772 14 4V12C14 12.5523 13.5523 13 13 13H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M2 8H10M10 8L7 5M10 8L7 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Logout
+        </button>
       </div>
     </div>
 
@@ -84,23 +90,21 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
         <!-- Profile Card -->
         <div class="card ov-profile-card">
           <div class="ov-avatar-wrap">
-            <div class="ov-avatar" id="ov-avatar-display">AN</div>
+            <div class="ov-avatar" id="ov-avatar-display">--</div>
             <label class="ov-avatar-edit" for="ov-avatar-input" title="Upload photo">
               <svg viewBox="0 0 14 14" fill="none"><path d="M9.5 2.5l2 2-7 7H2.5v-2l7-7z" stroke="white" stroke-width="1.2" stroke-linejoin="round"/></svg>
             </label>
             <input type="file" id="ov-avatar-input" accept="image/*" style="display:none" onchange="handleAvatarUpload(event)"/>
           </div>
           <div class="ov-profile-info">
-            <div class="ov-profile-name" id="ov-display-name">Aziz Nadaf</div>
+            <div class="ov-profile-name" id="ov-display-name">Guest User</div>
+            <div class="ov-profile-bio" id="ov-display-bio" style="font-size: 13px; color: var(--muted); margin: 4px 0 10px; line-height: 1.4;">No bio set yet.</div>
             <div class="ov-profile-badges">
               <span class="badge badge-green">✓ Verified Creator</span>
               <span class="ov-security-badge" id="ov-2fa-badge">🔒 2FA On</span>
             </div>
             <div class="ov-wallet-row">
-              <span class="ov-wallet-addr" id="ov-wallet-display">0x4f3a...8b2c</span>
-              <button class="ov-icon-btn" onclick="copyToClipboard('0x4f3a9e21c8b2c', 'Wallet address')" title="Copy wallet">
-                <svg viewBox="0 0 14 14" fill="none"><rect x="4" y="4" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M2 10V3a1 1 0 011-1h7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-              </button>
+              <span class="ov-wallet-addr" id="ov-wallet-display">0x0000...0000</span>
             </div>
             <div class="ov-meta-row">
               <span class="ov-meta-item">🕐 Last login: Today, 11:42 AM</span>
@@ -110,40 +114,37 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
           <button class="btn-outline ov-edit-btn" onclick="openEditProfile()">Edit Profile</button>
         </div>
 
-        <!-- API Key Card -->
+        <!-- Connected Wallet Card -->
         <div class="card ov-api-card">
           <div class="card-hdr">
-            <h3>API Key</h3>
+            <h3>Connected Wallet</h3>
             <span class="badge badge-green">Active</span>
           </div>
           <div class="ov-api-usage">
-            <span class="ov-api-usage-label">API Usage this month</span>
+            <span class="ov-api-usage-label">Wallet Activity</span>
             <div class="ov-api-bar-wrap">
               <div class="ov-api-bar" style="width: 62%"></div>
             </div>
-            <span class="ov-api-usage-num">6,200 / 10,000 calls</span>
+            <span class="ov-api-usage-num">62% reputation score</span>
           </div>
           <div class="ov-api-key-row">
-            <div class="ov-api-key-box">
-              <span class="ov-api-key-text" id="ov-api-key-text">lkg_live_•••• •••• •••• ••••</span>
+            <div class="ov-api-key-box" title="Full address available on hover">
+              <span class="ov-api-key-text" id="ov-api-key-text">0x0000...0000</span>
             </div>
-            <button class="ov-icon-btn" id="ov-copy-key-btn" onclick="copyApiKey()" title="Copy key" style="display:none">
+            <button class="ov-icon-btn" id="ov-copy-key-btn" onclick="copyOwnerWallet()" title="Copy wallet" style="display:none">
               <svg viewBox="0 0 14 14" fill="none"><rect x="4" y="4" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M2 10V3a1 1 0 011-1h7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
             </button>
           </div>
           <div class="ov-api-actions">
-            <button class="btn-outline" style="flex:1" onclick="revealApiKey()">
-              <span id="ov-reveal-btn-text">🔍 Reveal Key</span>
+            <button class="btn-outline" style="flex:1" onclick="toggleWalletVisibility()">
+              <span id="ov-toggle-btn-text">🔍 Show Wallet</span>
             </button>
-            <button class="btn-outline" style="flex:1; color: var(--danger); border-color: var(--danger);" onclick="confirmRegenKey()">↺ Regenerate</button>
+            <button class="btn-outline" style="flex:1" onclick="reconnectSession()">
+              <span>↺ Refresh Session</span>
+            </button>
           </div>
-          <!-- Inline password prompt -->
-          <div class="ov-password-prompt" id="ov-password-prompt" style="display:none">
-            <input type="password" class="form-input" id="ov-key-password" placeholder="Enter password to reveal..." style="margin-bottom:8px"/>
-            <div style="display:flex;gap:8px">
-              <button class="btn-primary" style="flex:1;justify-content:center" onclick="verifyAndReveal()">Confirm</button>
-              <button class="btn-outline" style="flex:1" onclick="cancelReveal()">Cancel</button>
-            </div>
+          <div style="font-size: 11px; color: var(--muted); margin-top: 8px; text-align: center;">
+            Wallet is hidden for security. Enter password to reveal.
           </div>
         </div>
 
@@ -154,7 +155,7 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
         <div class="ov-stat-card">
           <div class="ov-stat-icon" style="background: rgba(45,106,79,0.1);">📤</div>
           <div class="ov-stat-body">
-            <div class="ov-stat-val green" id="ov-stat-uploads">12</div>
+            <div class="ov-stat-val green" id="ov-stat-uploads">--</div>
             <div class="ov-stat-label">Total Uploads</div>
             <div class="ov-stat-trend trend-up">↑ 2 this week</div>
           </div>
@@ -162,7 +163,7 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
         <div class="ov-stat-card">
           <div class="ov-stat-icon" style="background: rgba(45,106,79,0.1);">🛡️</div>
           <div class="ov-stat-body">
-            <div class="ov-stat-val green">24</div>
+            <div class="ov-stat-val green" id="ov-stat-protected">--</div>
             <div class="ov-stat-label">Protected Assets</div>
             <div class="ov-stat-trend trend-up">↑ 3 this week</div>
           </div>
@@ -180,7 +181,7 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
           <div class="ov-stat-body">
             <div class="ov-stat-val amber">142</div>
             <div class="ov-stat-label">Active Watermarks</div>
-            <div class="ov-stat-trend" style="color:var(--muted)">across 24 files</div>
+            <div class="ov-stat-trend" style="color:var(--muted)">across -- files</div>
           </div>
         </div>
       </div>
@@ -199,42 +200,13 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
             <button class="ov-tab" onclick="switchOvTab(this, 'leaks')">Leak Alerts</button>
           </div>
           <div id="ov-tab-uploads" class="ov-tab-content">
-            <div class="ov-act-item">
-              <div class="ov-act-icon">🎬</div>
-              <div class="ov-act-info"><div class="ov-act-title">Short Film — "Echoes"</div><div class="ov-act-meta">Uploaded · 2 days ago · Movies</div></div>
-              <span class="badge badge-green">Protected</span>
-            </div>
-            <div class="ov-act-item">
-              <div class="ov-act-icon">🎵</div>
-              <div class="ov-act-info"><div class="ov-act-title">Track — "Dawn Breaks"</div><div class="ov-act-meta">Uploaded · 4 days ago · Music</div></div>
-              <span class="badge badge-green">Protected</span>
-            </div>
-            <div class="ov-act-item">
-              <div class="ov-act-icon">📄</div>
-              <div class="ov-act-info"><div class="ov-act-title">Script v3.pdf</div><div class="ov-act-meta">Uploaded · 6 days ago · Docs</div></div>
-              <span class="badge badge-green">Protected</span>
-            </div>
-            <div class="ov-act-item">
-              <div class="ov-act-icon">🖼️</div>
-              <div class="ov-act-info"><div class="ov-act-title">Artwork — "Neon Bloom"</div><div class="ov-act-meta">Uploaded · 7 days ago · Art</div></div>
-              <span class="badge badge-green">Protected</span>
-            </div>
+            <!-- Dynamic uploads log -->
           </div>
           <div id="ov-tab-leaks" class="ov-tab-content" style="display:none">
             <div class="ov-act-item">
               <div class="ov-act-icon">🚨</div>
               <div class="ov-act-info"><div class="ov-act-title">Short Film — "Echoes" leaked</div><div class="ov-act-meta">Telegram · 2 hours ago</div></div>
               <span class="badge badge-red">Critical</span>
-            </div>
-            <div class="ov-act-item">
-              <div class="ov-act-icon">⚠️</div>
-              <div class="ov-act-info"><div class="ov-act-title">Track — "Dawn Breaks" shared</div><div class="ov-act-meta">Reddit · 6 hours ago</div></div>
-              <span class="badge badge-amber">Moderate</span>
-            </div>
-            <div class="ov-act-item">
-              <div class="ov-act-icon">✅</div>
-              <div class="ov-act-info"><div class="ov-act-title">Artwork — "Neon Bloom" resolved</div><div class="ov-act-meta">Pinterest · 1 day ago</div></div>
-              <span class="badge badge-green">Resolved</span>
             </div>
           </div>
         </div>
@@ -306,10 +278,6 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
         <input type="text" class="form-input" id="ov-edit-name" placeholder="Your name..." />
       </div>
       <div class="form-group">
-        <label class="form-label">Wallet Address</label>
-        <input type="text" class="form-input" id="ov-edit-wallet" placeholder="0x..." />
-      </div>
-      <div class="form-group">
         <label class="form-label">Bio</label>
         <textarea class="form-textarea" id="ov-edit-bio" rows="2" placeholder="Short bio..."></textarea>
       </div>
@@ -326,10 +294,6 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
 </div>
 `);
 
-// ─── STATE ───────────────────────────────────────────────
-const OV_API_KEY = 'lkg_live_8f92bd4c1e3a7f2d9b5c0e8a1d4f7b3c';
-let apiRevealed = false;
-
 // ─── AVATAR ──────────────────────────────────────────────
 window.handleAvatarUpload = function (event) {
     const file = event.target.files[0];
@@ -345,57 +309,77 @@ window.handleAvatarUpload = function (event) {
     reader.readAsDataURL(file);
 };
 
-// ─── API KEY ─────────────────────────────────────────────
-window.revealApiKey = function () {
-    if (apiRevealed) {
-        hideApiKey();
+// ─── WALLET LOAD & TOGGLE ────────────────────────────────
+let walletRevealed = false;
+
+window.loadOwnerWallet = function () {
+    const wallet = localStorage.getItem("walletAddress");
+    const googleEmail = localStorage.getItem("userEmail");
+
+    if (!wallet && !googleEmail) {
+        alert("Please login or connect wallet");
+        if (window.goTo) window.goTo('s2');
         return;
     }
-    const prompt = document.getElementById('ov-password-prompt');
-    prompt.style.display = prompt.style.display === 'none' ? 'block' : 'none';
-};
 
-window.cancelReveal = function () {
-    document.getElementById('ov-password-prompt').style.display = 'none';
-    document.getElementById('ov-key-password').value = '';
-};
-
-window.verifyAndReveal = function () {
-    const pw = document.getElementById('ov-key-password').value;
-    const btn = document.getElementById('ov-reveal-btn-text');
-
-    if (!pw) { showToast('Please enter your password'); return; }
-
-    // Simulate loading
-    btn.textContent = '⏳ Verifying...';
-    setTimeout(() => {
-        // Demo: any non-empty password works
-        document.getElementById('ov-api-key-text').textContent = OV_API_KEY;
-        document.getElementById('ov-copy-key-btn').style.display = 'flex';
-        btn.textContent = '🙈 Hide Key';
-        document.getElementById('ov-password-prompt').style.display = 'none';
-        document.getElementById('ov-key-password').value = '';
-        apiRevealed = true;
-        showToast('API key revealed');
-    }, 800);
-};
-
-function hideApiKey() {
-    document.getElementById('ov-api-key-text').textContent = 'lkg_live_•••• •••• •••• ••••';
-    document.getElementById('ov-copy-key-btn').style.display = 'none';
-    document.getElementById('ov-reveal-btn-text').textContent = '🔍 Reveal Key';
-    apiRevealed = false;
-}
-
-window.copyApiKey = function () {
-    copyToClipboard(OV_API_KEY, 'API key');
-};
-
-window.confirmRegenKey = function () {
-    if (confirm('Regenerate API key? Your current key will stop working immediately.')) {
-        showToast('API key regenerated — update your integrations');
-        hideApiKey();
+    walletRevealed = false;
+    const keyText = document.getElementById("ov-api-key-text");
+    const toggleBtnText = document.getElementById("ov-toggle-btn-text");
+    const toggleBtn = toggleBtnText ? toggleBtnText.parentElement : null;
+    const copyBtn = document.getElementById("ov-copy-key-btn");
+    
+    if (copyBtn) copyBtn.style.display = 'none';
+    if (keyText) {
+        keyText.textContent = wallet ? (wallet.slice(0, 6) + "..." + wallet.slice(-4)) : 'Not Connected';
     }
+    
+    if (toggleBtnText) {
+        if (wallet) {
+            toggleBtnText.textContent = "🔍 Show Wallet";
+            toggleBtn.onclick = () => toggleWalletVisibility();
+            toggleBtn.disabled = false;
+        } else {
+            toggleBtnText.textContent = "➕ Add Wallet";
+            toggleBtn.onclick = () => showManualWalletModal('loadOwnerWallet');
+            toggleBtn.disabled = false;
+        }
+    }
+};
+
+window.toggleWalletVisibility = function () {
+    const wallet = localStorage.getItem("walletAddress");
+    const savedPassword = localStorage.getItem("walletPassword");
+    const el = document.getElementById("ov-api-key-text");
+    const btnText = document.getElementById("ov-toggle-btn-text");
+    const copyBtn = document.getElementById("ov-copy-key-btn");
+
+    if (!wallet || !el) return;
+
+    if (walletRevealed) {
+        walletRevealed = false;
+        el.textContent = wallet.slice(0, 6) + "..." + wallet.slice(-4);
+        if (btnText) btnText.textContent = "🔍 Show Wallet";
+        if (copyBtn) copyBtn.style.display = 'none';
+        return;
+    }
+
+    if (!savedPassword) {
+        const newPass = prompt("Set a password to secure your wallet:");
+        if (!newPass) return;
+        localStorage.setItem("walletPassword", newPass);
+        showToast("Password set successfully");
+    } else {
+        const input = prompt("Enter password to view wallet:");
+        if (input !== savedPassword) {
+            alert("Incorrect password");
+            return;
+        }
+    }
+
+    walletRevealed = true;
+    el.textContent = wallet;
+    if (btnText) btnText.textContent = "🙈 Hide Wallet";
+    if (copyBtn) copyBtn.style.display = 'block';
 };
 
 // ─── CLIPBOARD ───────────────────────────────────────────
@@ -405,6 +389,15 @@ window.copyToClipboard = function (text, label) {
     }).catch(() => {
         showToast('Copy failed — please copy manually');
     });
+};
+
+window.copyOwnerWallet = function () {
+    const wallet = localStorage.getItem("walletAddress");
+    if (wallet) {
+        copyToClipboard(wallet, 'Wallet address');
+    } else {
+        showToast('No wallet connected');
+    }
 };
 
 // ─── TOAST ───────────────────────────────────────────────
@@ -433,25 +426,18 @@ window.runLeakScan = function () {
 window.downloadReport = function () {
     showToast('📊 Report download started');
 };
+
 window.logoutUser = function () {
-  // Clear wallet session
-  if (window.disconnectWallet) {
-    window.disconnectWallet();
-  }
-
-  // Clear local data
+  if (window.disconnectWallet) window.disconnectWallet();
   localStorage.clear();
-
-  // Redirect to auth screen
   if (window.goTo) window.goTo('s2');
-
   console.log("🚪 User logged out");
 };
 
 // ─── EDIT PROFILE ────────────────────────────────────────
 window.openEditProfile = function () {
     document.getElementById('ov-edit-name').value = document.getElementById('ov-display-name').textContent;
-    document.getElementById('ov-edit-wallet').value = document.getElementById('ov-wallet-display').textContent;
+    document.getElementById('ov-edit-bio').value = document.getElementById('ov-display-bio').textContent === 'No bio set yet.' ? '' : document.getElementById('ov-display-bio').textContent;
     document.getElementById('ov-modal').style.display = 'flex';
 };
 
@@ -465,33 +451,110 @@ window.closeEditProfileDirect = function () {
     document.getElementById('ov-modal').style.display = 'none';
 };
 
-window.saveProfile = function () {
+// ─── PROFILE LOAD ────────────────────────────────────────
+window.loadOwnerProfile = async function () {
+    const loginType = localStorage.getItem("loginType");
+    const wallet = localStorage.getItem("walletAddress");
+    const email = localStorage.getItem("userEmail");
+
+    if (!email && !wallet) return;
+
+    try {
+        const user = await fetchUser();
+        if (!user) return;
+
+        const nameEl = document.getElementById('ov-display-name');
+        const bioEl = document.getElementById('ov-display-bio');
+        const walletEl = document.getElementById('ov-wallet-display');
+        const avatarEl = document.getElementById('ov-avatar-display');
+        
+        nameEl.textContent = user.name || "Guest User";
+        if (bioEl) bioEl.textContent = user.bio || "No bio set yet.";
+
+        if (user.walletAddress) {
+            const formatted = user.walletAddress.slice(0, 6) + '...' + user.walletAddress.slice(-4);
+            walletEl.textContent = formatted;
+            localStorage.setItem("walletAddress", user.walletAddress); // Cache
+        } else {
+            walletEl.textContent = "Not Linked";
+        }
+
+        if (user.photo) {
+            avatarEl.style.backgroundImage = `url(${user.photo})`;
+            avatarEl.style.backgroundSize = 'cover';
+            avatarEl.textContent = '';
+        } else {
+            const initials = (user.name || "G").split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+            avatarEl.textContent = initials;
+        }
+
+        if (window.updateSidebarUserInfo) window.updateSidebarUserInfo();
+        window.refreshOwnerStats();
+    } catch (err) {
+        console.error("Profile load failed:", err);
+    }
+};
+
+window.saveProfile = async function () {
     const name = document.getElementById('ov-edit-name').value.trim();
-    const wallet = document.getElementById('ov-edit-wallet').value.trim();
+    const bio = document.getElementById('ov-edit-bio').value.trim();
+    const loginType = localStorage.getItem("loginType");
+    const email = localStorage.getItem("userEmail");
+    const wallet = localStorage.getItem("walletAddress");
+
+    const identifier = loginType === "google" ? email : wallet;
+
     if (!name) { showToast('Name cannot be empty'); return; }
+    if (!identifier) { showToast('No identity found'); return; }
 
-    document.getElementById('ov-display-name').textContent = name;
-    if (wallet) document.getElementById('ov-wallet-display').textContent = wallet;
+    try {
+        // Update user profile
+        await api("/api/users/profile", {
+            method: "PUT",
+            body: JSON.stringify({ identifier, name, bio })
+        });
 
-    // Update sidebar avatar initials
-    const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-    const avatarEl = document.getElementById('ov-avatar-display');
-    if (!avatarEl.style.backgroundImage) avatarEl.textContent = initials;
-
-    closeEditProfileDirect();
-    showToast('Profile updated successfully');
+        closeEditProfileDirect();
+        showToast('Profile updated successfully');
+        
+        // Refresh everything
+        window.loadOwnerProfile();
+        if (window.updateSidebarUserInfo) window.updateSidebarUserInfo();
+    } catch (err) {
+        showToast('Update failed: ' + err.message);
+    }
 };
 
-// ─── STATS: sync from localStorage ───────────────────────
-window.refreshOwnerStats = function () {
-    const assets = JSON.parse(localStorage.getItem('creatorChainAssets') || '[]');
-    const el = document.getElementById('ov-stat-uploads');
-    if (el) el.textContent = assets.length || 12;
-};
+// ─── STATS ───────────────────────
+window.refreshOwnerStats = async function () {
+    try {
+        const assets = await fetchAssets();
+        
+        const uploadStat = document.getElementById('ov-stat-uploads');
+        const protectedStat = document.getElementById('ov-stat-protected');
+        const tabContent = document.getElementById('ov-tab-uploads');
 
-// call on screen open
-const _origGoTo = window.goTo;
-window.goTo = function (id) {
-    _origGoTo(id);
-    if (id === 's6') window.refreshOwnerStats && window.refreshOwnerStats();
+        if (uploadStat) uploadStat.textContent = assets.length;
+        if (protectedStat) protectedStat.textContent = assets.length;
+
+        if (tabContent) {
+            const icons = { movies: '🎬', 'web-series': '📺', anime: '🌸', music: '🎵', docs: '📄' };
+            tabContent.innerHTML = assets.slice(0, 5).map(asset => `
+                <div class="ov-act-item">
+                  <div class="ov-act-icon">${icons[asset.category] || '📁'}</div>
+                  <div class="ov-act-info">
+                    <div class="ov-act-title">${asset.title}</div>
+                    <div class="ov-act-meta">Uploaded · ${new Date(asset.createdAt).toLocaleDateString()}</div>
+                  </div>
+                  <span class="badge badge-green">Protected</span>
+                </div>
+            `).join('');
+            
+            if (assets.length === 0) {
+                tabContent.innerHTML = '<div style="padding:2rem;text-align:center;color:#888">No activity found</div>';
+            }
+        }
+    } catch (err) {
+        console.error("Stats refresh failed:", err);
+    }
 };

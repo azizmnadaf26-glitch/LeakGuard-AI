@@ -1,3 +1,5 @@
+import { api, fetchUser } from "../api";
+
 document.getElementById('app').insertAdjacentHTML('beforeend', `
 <div class="screen" id="s4">
   <div class="sidebar">
@@ -46,9 +48,9 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
     </div>
     <div class="sb-footer">
       <div class="sb-user">
-        <div class="sb-avatar">AN</div>
+        <div class="sb-avatar">--</div>
         <div>
-          <div class="sb-user-name">Aziz Nadaf</div>
+          <div class="sb-user-name">Guest User</div>
           <div class="sb-user-role">Creator · Verified</div>
         </div>
       </div>
@@ -73,8 +75,9 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
         </div>
 
         <div class="form-group">
-          <label class="form-label">Upload API Key</label>
-          <input type="text" id="upload-api-key" class="form-input" placeholder="e.g. lkg_live_8f92bd..." />
+          <label class="form-label">Connected Wallet</label>
+          <input type="text" id="upload-api-key" class="form-input" style="opacity: 0.7; cursor: not-allowed;" readonly />
+          <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">This wallet will be used to register ownership on blockchain</div>
         </div>
         <div class="form-group">
           <label class="form-label">Title</label>
@@ -130,7 +133,8 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
 `);
 
 window.triggerFileSelect = function () {
-  document.getElementById('upload-file').click();
+  const input = document.getElementById('upload-file');
+  if (input) input.click();
 };
 
 window.handleFileSelect = function (event) {
@@ -141,27 +145,31 @@ window.handleFileSelect = function (event) {
 window.handleDragOver = function (event) {
   event.preventDefault();
   event.stopPropagation();
-  document.getElementById('upload-drop-zone').style.borderColor = '#4ADE80';
+  const zone = document.getElementById('upload-drop-zone');
+  if (zone) zone.style.borderColor = '#4ADE80';
 };
 
 window.handleDragLeave = function (event) {
   event.preventDefault();
   event.stopPropagation();
-  document.getElementById('upload-drop-zone').style.borderColor = '';
+  const zone = document.getElementById('upload-drop-zone');
+  if (zone) zone.style.borderColor = '';
 };
 
 window.handleDrop = function (event) {
   event.preventDefault();
   event.stopPropagation();
-  document.getElementById('upload-drop-zone').style.borderColor = '';
+  const zone = document.getElementById('upload-drop-zone');
+  if (zone) zone.style.borderColor = '';
   if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
     const file = event.dataTransfer.files[0];
     document.getElementById('upload-file-name').innerText = file.name;
-    document.getElementById('upload-file').files = event.dataTransfer.files;
+    const input = document.getElementById('upload-file');
+    if (input) input.files = event.dataTransfer.files;
   }
 };
 
-window.handleUpload = function () {
+window.handleUpload = async function () {
   const title = document.getElementById('upload-title').value.trim();
   const category = document.getElementById('upload-category').value;
   const desc = document.getElementById('upload-desc').value.trim();
@@ -172,23 +180,93 @@ window.handleUpload = function () {
     return;
   }
 
+  const loginType = localStorage.getItem("loginType");
+  const wallet = localStorage.getItem("walletAddress");
+  const googleEmail = localStorage.getItem("userEmail");
+
+  // Force wallet requirement for non-Google users or if strict mode is implied
+  if (loginType === "wallet" && !wallet) {
+    alert("Please connect or add wallet before uploading");
+    return;
+  }
+
+  if (!loginType) {
+    alert("Please login to upload.");
+    goTo('s2');
+    return;
+  }
+
+  let ownerName = "Anonymous Creator";
+  try {
+    const user = await fetchUser();
+    if (user && user.name) ownerName = user.name;
+  } catch (err) {
+    console.warn("Could not fetch owner name for upload", err);
+  }
+
   const newAsset = {
-    title, category, desc, fileName,
-    date: new Date().toLocaleString(),
-    uploader: 'Aziz Nadaf'
+    title,
+    category,
+    description: desc,
+    fileName,
+    walletAddress: wallet || null,
+    email: googleEmail || null,
+    ownerName,
+    createdAt: new Date()
   };
 
-  let assets = JSON.parse(localStorage.getItem('creatorChainAssets') || '[]');
-  assets.push(newAsset);
-  localStorage.setItem('creatorChainAssets', JSON.stringify(assets));
+  try {
+    await api("/api/assets/", {
+      method: "POST",
+      body: JSON.stringify(newAsset)
+    });
 
-  alert('Asset uploaded and protected successfully!');
+    alert('Asset uploaded and protected successfully!');
+    
+    // Sync UI after upload
+    if (window.refreshUserAssets) {
+      await window.refreshUserAssets();
+    }
+    
+    // Reset form
+    document.getElementById('upload-title').value = '';
+    document.getElementById('upload-category').value = '';
+    document.getElementById('upload-desc').value = '';
+    document.getElementById('upload-file-name').innerText = 'Drag and drop file here';
+    
+    // Redirect to My Property
+    goTo('s5');
+  } catch (error) {
+    alert("Upload failed. Please try again.");
+    console.error("Upload failed:", error);
+  }
+};
 
-  // Reset form
-  document.getElementById('upload-title').value = '';
-  document.getElementById('upload-category').value = '';
-  document.getElementById('upload-desc').value = '';
-  document.getElementById('upload-file-name').innerText = 'Drag and drop file here';
+window.refreshUploadScreen = function() {
+  loadUploadWallet();
+};
 
-  goTo('s5');
+window.loadUploadWallet = function () {
+  const wallet = localStorage.getItem("walletAddress");
+  const input = document.getElementById("upload-api-key");
+  
+  if (input) {
+    if (wallet) {
+      input.value = wallet.slice(0, 6) + "..." + wallet.slice(-4);
+      input.readOnly = true;
+      input.style.opacity = "0.7";
+      input.style.cursor = "not-allowed";
+      input.placeholder = "";
+    } else {
+      input.value = "";
+      input.readOnly = false;
+      input.style.opacity = "1";
+      input.style.cursor = "text";
+      input.placeholder = "Enter your wallet address manually";
+      
+      input.oninput = (e) => {
+        localStorage.setItem("walletAddress", e.target.value.trim());
+      };
+    }
+  }
 };
