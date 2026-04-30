@@ -2,6 +2,8 @@ package com.leakguard.database.controller;
 
 import com.leakguard.database.model.Asset;
 import com.leakguard.database.service.AssetService;
+
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,7 +35,7 @@ public class AssetController {
     }
 
     @DeleteMapping("/{id}")
-    public void deleteAsset(@PathVariable String id) {
+    public void deleteAsset(@PathVariable @NonNull String id) {
         assetService.deleteAsset(id);
     }
 }
