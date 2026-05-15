@@ -171,17 +171,17 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
         <div class="ov-stat-card">
           <div class="ov-stat-icon" style="background: rgba(224,82,82,0.1);">🚨</div>
           <div class="ov-stat-body">
-            <div class="ov-stat-val red">7</div>
-            <div class="ov-stat-label">Leaks Detected</div>
-            <div class="ov-stat-trend trend-down">↑ 2 new today</div>
+            <div class="ov-stat-val red" id="ov-stat-alerts">0</div>
+            <div class="ov-stat-label">Security Alerts</div>
+            <div class="ov-stat-trend trend-down">Leaks & Tampering</div>
           </div>
         </div>
         <div class="ov-stat-card">
           <div class="ov-stat-icon" style="background: rgba(240,165,0,0.1);">💧</div>
           <div class="ov-stat-body">
-            <div class="ov-stat-val amber">142</div>
+            <div class="ov-stat-val amber" id="ov-stat-active-watermarks">0</div>
             <div class="ov-stat-label">Active Watermarks</div>
-            <div class="ov-stat-trend" style="color:var(--muted)">across -- files</div>
+            <div class="ov-stat-trend" style="color:var(--muted)">1 per asset</div>
           </div>
         </div>
       </div>
@@ -203,10 +203,8 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
             <!-- Dynamic uploads log -->
           </div>
           <div id="ov-tab-leaks" class="ov-tab-content" style="display:none">
-            <div class="ov-act-item">
-              <div class="ov-act-icon">🚨</div>
-              <div class="ov-act-info"><div class="ov-act-title">Short Film — "Echoes" leaked</div><div class="ov-act-meta">Telegram · 2 hours ago</div></div>
-              <span class="badge badge-red">Critical</span>
+            <div id="ov-alerts-list">
+              <div style="padding:2rem;text-align:center;color:#888">Loading security alerts...</div>
             </div>
           </div>
         </div>
@@ -239,7 +237,7 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
 
           <!-- Security Status -->
           <div class="card">
-            <div class="card-hdr"><h3>Security Status</h3><span class="badge badge-green">Secure</span></div>
+            <div class="card-hdr"><h3>Security Status</h3><span class="badge badge-green" id="ov-security-status-badge">Secure</span></div>
             <div class="ov-security-rows">
               <div class="ov-sec-row">
                 <span class="ov-sec-label">Two-Factor Auth</span>
@@ -256,6 +254,12 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
               <div class="ov-sec-row">
                 <span class="ov-sec-label">API Key Status</span>
                 <span class="badge badge-green">Valid</span>
+              </div>
+              <div style="margin-top:12px">
+                <button class="btn-primary" style="width:100%; justify-content:center" onclick="runIntegrityCheck()">
+                  <svg viewBox="0 0 16 16" fill="none" style="width:14px;height:14px;margin-right:6px"><path d="M8 1v14M1 8h14" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+                  Check Data Integrity
+                </button>
               </div>
             </div>
           </div>
@@ -416,6 +420,77 @@ window.switchOvTab = function (btn, tab) {
     btn.classList.add('active');
     document.getElementById('ov-tab-uploads').style.display = tab === 'uploads' ? 'block' : 'none';
     document.getElementById('ov-tab-leaks').style.display = tab === 'leaks' ? 'block' : 'none';
+    
+    if (tab === 'leaks') {
+        window.fetchAlerts();
+    }
+};
+
+window.fetchAlerts = async function() {
+    const email = localStorage.getItem("userEmail");
+    const wallet = localStorage.getItem("walletAddress");
+    const identifier = email || wallet;
+    
+    const container = document.getElementById('ov-alerts-list');
+    if (!container || !identifier) return;
+
+    try {
+        const alerts = await api(`/api/assets/alerts/${identifier}`);
+        if (alerts.length === 0) {
+            container.innerHTML = '<div style="padding:2rem;text-align:center;color:#888">No security alerts found. Your assets are secure.</div>';
+            return;
+        }
+
+        container.innerHTML = alerts.map(alert => `
+            <div class="ov-act-item">
+              <div class="ov-act-icon" style="background:${alert.type === 'LEAK' ? 'rgba(224,82,82,0.1)' : 'rgba(240,165,0,0.1)'}">
+                ${alert.type === 'LEAK' ? '🚨' : '🛡️'}
+              </div>
+              <div class="ov-act-info">
+                <div class="ov-act-title" style="color:${alert.type === 'LEAK' ? 'var(--danger)' : 'var(--amber)'}">
+                    ${alert.type === 'LEAK' ? 'CONTENT LEAK DETECTED' : 'DATABASE TAMPER DETECTED'}
+                </div>
+                <div class="ov-act-meta">
+                    ${alert.message} <br/>
+                    ${alert.type === 'LEAK' ? `Similarity: ${alert.similarityScore} | Leaked By: ${alert.leakedBy.slice(0,8)}...` : ''}
+                    <div style="font-size:10px; margin-top:4px">${new Date(alert.createdAt).toLocaleString()}</div>
+                </div>
+              </div>
+              <span class="badge ${alert.type === 'LEAK' ? 'badge-red' : 'badge-yellow'}">
+                ${alert.type === 'LEAK' ? 'Critical' : 'Warning'}
+              </span>
+            </div>
+        `).join('');
+    } catch (err) {
+        container.innerHTML = `<div style="padding:1rem;color:var(--danger)">Failed to load alerts: ${err.message}</div>`;
+    }
+};
+
+window.runIntegrityCheck = async function() {
+    showToast('🛡️ Running blockchain integrity check...');
+    const badge = document.getElementById('ov-security-status-badge');
+    
+    try {
+        const result = await api('/api/assets/validate-chain');
+        if (result.valid) {
+            if (badge) {
+                badge.textContent = "Secure";
+                badge.className = "badge badge-green";
+            }
+            alert("✅ Integrity Check Passed: All data records are perfectly linked and secure.");
+            showToast("System Secure");
+        } else {
+            if (badge) {
+                badge.textContent = "TAMPERED";
+                badge.className = "badge badge-red";
+            }
+            alert("⚠️ SECURITY ALERT: " + result.message);
+            window.fetchAlerts();
+            window.switchOvTab(document.querySelectorAll('.ov-tab')[1], 'leaks');
+        }
+    } catch (err) {
+        showToast("Integrity check failed");
+    }
 };
 
 // ─── QUICK ACTIONS ───────────────────────────────────────
@@ -458,6 +533,11 @@ window.loadOwnerProfile = async function () {
     const email = localStorage.getItem("userEmail");
 
     if (!email && !wallet) return;
+
+    // Auto-check integrity on load (Silent)
+    api('/api/assets/validate-chain').then(res => {
+        if (!res.valid) window.fetchAlerts();
+    }).catch(e => console.error("Auto-integrity check failed", e));
 
     try {
         const user = await fetchUser();
@@ -529,13 +609,25 @@ window.saveProfile = async function () {
 window.refreshOwnerStats = async function () {
     try {
         const assets = await fetchAssets();
+        const email = localStorage.getItem("userEmail");
+        const wallet = localStorage.getItem("walletAddress");
+        const identifier = email || wallet;
+        
+        let alerts = [];
+        if (identifier) {
+            alerts = await api(`/api/assets/alerts/${identifier}`);
+        }
         
         const uploadStat = document.getElementById('ov-stat-uploads');
         const protectedStat = document.getElementById('ov-stat-protected');
+        const alertStat = document.getElementById('ov-stat-alerts');
+        const watermarkStat = document.getElementById('ov-stat-active-watermarks');
         const tabContent = document.getElementById('ov-tab-uploads');
 
         if (uploadStat) uploadStat.textContent = assets.length;
         if (protectedStat) protectedStat.textContent = assets.length;
+        if (alertStat) alertStat.textContent = alerts.length;
+        if (watermarkStat) watermarkStat.textContent = assets.length;
 
         if (tabContent) {
             const icons = { movies: '🎬', 'web-series': '📺', anime: '🌸', music: '🎵', docs: '📄' };

@@ -83,10 +83,7 @@ document.getElementById('app').insertAdjacentHTML('beforeend', `
         <div class="card">
           <div class="card-hdr"><h3>Recent Leak Detections</h3><span class="badge badge-red">2 critical</span></div>
           <div class="leak-item"><div class="leak-thumb">🎬</div><div class="leak-info"><div class="leak-title">Short Film — "Echoes"</div><div class="leak-meta">Detected on Telegram · 2h ago</div></div><span class="badge badge-red">Critical</span></div>
-          <div class="leak-item"><div class="leak-thumb">🎵</div><div class="leak-info"><div class="leak-title">Track — "Dawn Breaks"</div><div class="leak-meta">Detected on Reddit · 6h ago</div></div><span class="badge badge-amber">Moderate</span></div>
-          <div class="leak-item"><div class="leak-thumb">🖼️</div><div class="leak-info"><div class="leak-title">Artwork — "Neon Bloom"</div><div class="leak-meta">Detected on Pinterest · 1d ago</div></div><span class="badge badge-green">Resolved</span></div>
-          <div class="leak-item"><div class="leak-thumb">📄</div><div class="leak-info"><div class="leak-title">Document — "Script v3.pdf"</div><div class="leak-meta">Detected on Scribd · 2d ago</div></div><span class="badge badge-green">Resolved</span></div>
-        </div>
+          </div>
         <div class="card">
           <div class="card-hdr"><h3>Watermark Health</h3><span>Active</span></div>
           <div class="wm-vis"><div class="wm-grid"></div><span class="wm-label">Watermark mesh active</span></div>

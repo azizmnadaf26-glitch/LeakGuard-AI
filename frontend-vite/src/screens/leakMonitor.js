@@ -333,7 +333,7 @@ function lmLoadFile(file) {
 // ─────────────────────────────────────────────────────────────
 //  VERIFY — animated scan steps
 // ─────────────────────────────────────────────────────────────
-window.lmVerify = function () {
+window.lmVerify = async function () {
     if (!lmCurrentFile) return;
     clearTimeout(lmScanTimer);
 
@@ -350,7 +350,6 @@ window.lmVerify = function () {
         'Extracting watermark fingerprint…',
         'Running AI content hash analysis…',
         'Cross-referencing blockchain registry…',
-        'Scanning Telegram · Reddit · Discord…',
         'Compiling leak trace report…',
     ];
 
@@ -381,135 +380,104 @@ window.lmVerify = function () {
             const cur = document.getElementById(`lm-step-${idx}`);
             if (cur) cur.classList.add('active');
             idx++;
-            lmScanTimer = setTimeout(advance, 550 + Math.random() * 350);
-        } else {
-            lmScanTimer = setTimeout(lmShowResults, 350);
+            lmScanTimer = setTimeout(advance, 600);
         }
     }
     advance();
+
+    // Prepare FormData
+    const formData = new FormData();
+    formData.append("file", lmCurrentFile);
+
+    try {
+        const response = await fetch(`${window.location.origin.replace('5173', '8080')}/api/leak/detect`, {
+            method: "POST",
+            body: formData
+        });
+
+        const result = await response.json();
+        const detected = result.status === "LEAK DETECTED" || result.status === "TAMPER DETECTED";
+
+        // Wait a bit to let animations finish or at least look real
+        await new Promise(r => setTimeout(r, 1500));
+
+        // ── Status card update ──────────────────────────────────
+        const statusBadge = document.getElementById('lm-status-badge');
+        statusBadge.textContent = detected ? result.status : 'File Safe';
+        statusBadge.className = detected ? 'badge badge-red' : 'badge badge-green';
+
+        const statusCard = document.getElementById('lm-status-card');
+        if (detected) statusCard.classList.add('lm-detected');
+        else statusCard.classList.remove('lm-detected');
+
+        document.getElementById('lm-status-body').innerHTML = `
+        <div class="lm-idle-state">
+          <div class="lm-idle-icon">${detected ? '🚨' : '✅'}</div>
+          <div class="lm-idle-text" style="color:${detected ? 'var(--danger)' : 'var(--sage)'};font-weight:500;">
+            ${detected
+                ? `Leak identified. Original owner traced to ${result.ownerEmail || result.walletAddress}.`
+                : 'No leak detected. This file does not match any watermarked assets.'}
+          </div>
+        </div>`;
+
+        // ── Mini stats ──────────────────────────────────────────
+        document.getElementById('lm-mini-stats').style.display = 'grid';
+        const sv = document.getElementById('lmms-status-val');
+        sv.textContent = detected ? 'LEAKED' : 'SAFE';
+        sv.className = detected ? 'lmms-val red' : 'lmms-val green';
+        document.getElementById('lmms-platform-val').textContent = detected ? 'Unknown' : 'None';
+        document.getElementById('lmms-conf-val').textContent = result.similarity || '100%';
+
+        // ── Show results section ────────────────────────────────
+        document.getElementById('lm-results-section').style.display = 'block';
+
+        // Leak Details card
+        document.getElementById('lm-result-badge').textContent = detected ? 'Detected' : 'Clean';
+        document.getElementById('lm-result-badge').className = detected ? 'badge badge-red' : 'badge badge-green';
+        document.getElementById('lm-detail-rows').innerHTML = [
+            ['Status', detected ? `🚨 ${result.status}` : '✅ File Safe', detected ? 'red' : 'green'],
+            ['Similarity', result.similarity || '—', ''],
+            ['Original File', result.fileName || '—', ''],
+            ['Watermark ID', result.watermarkId || 'None', ''],
+            ['Scan Completed', new Date().toLocaleTimeString(), ''],
+        ].map(([label, value, cls]) => `
+        <div class="lm-detail-row">
+          <span class="lm-detail-label">${label}</span>
+          <span class="lm-detail-value ${cls}">${value}</span>
+        </div>`).join('');
+
+        // Leaked By card
+        if (detected) {
+            document.getElementById('lm-leaked-badge').style.display = 'inline-block';
+            document.getElementById('lm-leaked-by-body').innerHTML = [
+                ['📧', 'Owner Email', result.ownerEmail || 'N/A'],
+                ['🆔', 'Wallet Address', result.walletAddress || 'N/A'],
+                ['🕐', 'Detection Time', new Date().toLocaleString()],
+            ].map(([icon, key, val]) => `
+          <div class="lm-leaked-row">
+            <div class="lm-leaked-icon">${icon}</div>
+            <div>
+              <div class="lm-leaked-key">${key}</div>
+              <div class="lm-leaked-val" style="word-break:break-all;">${val}</div>
+            </div>
+          </div>`).join('');
+        } else {
+            document.getElementById('lm-leaked-badge').style.display = 'none';
+            document.getElementById('lm-leaked-by-body').innerHTML = `
+          <div class="lm-idle-state" style="padding:.8rem 0;">
+            <div class="lm-idle-icon" style="font-size:1.4rem;">✅</div>
+            <div class="lm-idle-text">No leaker trace found.</div>
+          </div>`;
+        }
+
+    } catch (err) {
+        lmToast('Detection failed: ' + err.message);
+        document.getElementById('lm-status-badge').textContent = 'Error';
+        document.getElementById('lm-status-badge').className = 'badge badge-red';
+    } finally {
+        verifyBtn.disabled = false;
+    }
 };
-
-// ─────────────────────────────────────────────────────────────
-//  SHOW RESULTS
-// ─────────────────────────────────────────────────────────────
-function lmShowResults() {
-    // Demo: 65% chance of detection
-    const detected = Math.random() > 0.35;
-    const confidence = detected
-        ? (80 + Math.floor(Math.random() * 17)) + '%'
-        : '100% clean';
-
-    const platforms = detected
-        ? [
-            { name: 'Telegram', icon: '✈️', time: '2h ago', severity: 'critical' },
-            { name: 'Reddit', icon: '🤖', time: '6h ago', severity: 'moderate' },
-            { name: 'Discord', icon: '💬', time: '1d ago', severity: 'moderate' },
-        ]
-        : [];
-
-    const leakDate = detected ? 'Apr 26, 2026 · 09:14 AM' : '—';
-
-    // ── Status card update ──────────────────────────────────
-    const statusBadge = document.getElementById('lm-status-badge');
-    statusBadge.textContent = detected ? 'Leak Detected' : 'File Safe';
-    statusBadge.className = detected ? 'badge badge-red' : 'badge badge-green';
-
-    const statusCard = document.getElementById('lm-status-card');
-    if (detected) statusCard.classList.add('lm-detected');
-    else statusCard.classList.remove('lm-detected');
-
-    document.getElementById('lm-status-body').innerHTML = `
-    <div class="lm-idle-state">
-      <div class="lm-idle-icon">${detected ? '🚨' : '✅'}</div>
-      <div class="lm-idle-text" style="color:${detected ? 'var(--danger)' : 'var(--sage)'};font-weight:500;">
-        ${detected
-            ? `Leak confirmed across ${platforms.length} platform(s). Immediate action recommended.`
-            : 'No leak detected. Your file appears clean and uncompromised.'}
-      </div>
-    </div>`;
-
-    // ── Mini stats ──────────────────────────────────────────
-    document.getElementById('lm-mini-stats').style.display = 'grid';
-    const sv = document.getElementById('lmms-status-val');
-    sv.textContent = detected ? 'LEAKED' : 'SAFE';
-    sv.className = detected ? 'lmms-val red' : 'lmms-val green';
-    document.getElementById('lmms-platform-val').textContent = detected ? platforms[0].name : 'None';
-    document.getElementById('lmms-conf-val').textContent = confidence;
-
-    // ── Show results section ────────────────────────────────
-    document.getElementById('lm-results-section').style.display = 'block';
-
-    // Leak Details card
-    document.getElementById('lm-result-badge').textContent = detected ? 'Detected' : 'Clean';
-    document.getElementById('lm-result-badge').className = detected ? 'badge badge-red' : 'badge badge-green';
-    document.getElementById('lm-detail-rows').innerHTML = [
-        ['Status', detected ? '🚨 Leak Detected' : '✅ File Safe', detected ? 'red' : 'green'],
-        ['Confidence', confidence, ''],
-        ['First Detected', leakDate, ''],
-        ['Watermark Source', detected ? 'Internal watermark #WM-4821' : 'No match found', ''],
-        ['File', lmCurrentFile ? lmCurrentFile.name : '—', ''],
-        ['Scan Completed', new Date().toLocaleTimeString(), ''],
-    ].map(([label, value, cls]) => `
-    <div class="lm-detail-row">
-      <span class="lm-detail-label">${label}</span>
-      <span class="lm-detail-value ${cls}">${value}</span>
-    </div>`).join('');
-
-    // Leaked By card
-    if (detected) {
-        document.getElementById('lm-leaked-badge').style.display = 'inline-block';
-        document.getElementById('lm-leaked-by-body').innerHTML = [
-            ['📧', 'Email', 'leaker_48**@gmail.com'],
-            ['📍', 'Location', 'Mumbai, Maharashtra, IN'],
-            ['🆔', 'User ID', '#TG-4821-LEAK'],
-            ['🕐', 'First Shared', 'Apr 26, 2026 · 09:14 AM'],
-        ].map(([icon, key, val]) => `
-      <div class="lm-leaked-row">
-        <div class="lm-leaked-icon">${icon}</div>
-        <div>
-          <div class="lm-leaked-key">${key}</div>
-          <div class="lm-leaked-val">${val}</div>
-        </div>
-      </div>`).join('');
-    } else {
-        document.getElementById('lm-leaked-badge').style.display = 'none';
-        document.getElementById('lm-leaked-by-body').innerHTML = `
-      <div class="lm-idle-state" style="padding:.8rem 0;">
-        <div class="lm-idle-icon" style="font-size:1.4rem;">✅</div>
-        <div class="lm-idle-text">No leaker trace found.</div>
-      </div>`;
-    }
-
-    // Platforms card
-    if (detected && platforms.length) {
-        const pc = document.getElementById('lm-platform-count');
-        pc.style.display = 'inline-block';
-        pc.textContent = `${platforms.length} found`;
-        document.getElementById('lm-platforms-body').innerHTML = `
-      <div class="lm-platform-list">
-        ${platforms.map(p => `
-          <div class="lm-platform-row ${p.severity === 'critical' ? 'lm-platform-critical' : ''}">
-            <div class="lm-platform-left">
-              <span class="lm-platform-icon">${p.icon}</span>
-              <span class="lm-platform-name">${p.name}</span>
-            </div>
-            <div style="text-align:right;">
-              <span class="badge ${p.severity === 'critical' ? 'badge-red' : 'badge-amber'}">${p.severity === 'critical' ? 'Critical' : 'Moderate'}</span>
-              <div class="lm-platform-time">${p.time}</div>
-            </div>
-          </div>`).join('')}
-      </div>`;
-    } else {
-        document.getElementById('lm-platform-count').style.display = 'none';
-        document.getElementById('lm-platforms-body').innerHTML = `
-      <div class="lm-idle-state" style="padding:.8rem 0;">
-        <div class="lm-idle-icon" style="font-size:1.4rem;">🌐</div>
-        <div class="lm-idle-text">No platforms detected.</div>
-      </div>`;
-    }
-
-    document.getElementById('lm-verify-btn').disabled = false;
-}
 
 // ─────────────────────────────────────────────────────────────
 //  RESET

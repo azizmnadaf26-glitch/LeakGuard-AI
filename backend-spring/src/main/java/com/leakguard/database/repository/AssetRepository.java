@@ -10,4 +10,8 @@ import java.util.List;
 public interface AssetRepository extends MongoRepository<Asset, String> {
     List<Asset> findByWalletAddress(String walletAddress);
     List<Asset> findByEmail(String email);
+    Asset findFirstByOrderByIndexDesc();
+    List<Asset> findAllByOrderByIndexAsc();
+    java.util.Optional<Asset> findByWatermarkId(String watermarkId);
+    java.util.Optional<Asset> findFirstByWatermarkIdStartingWith(String watermarkId);
 }

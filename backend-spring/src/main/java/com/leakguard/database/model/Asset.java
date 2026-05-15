@@ -23,5 +23,13 @@ public class Asset {
     private String email;
     private String ownerName;
     private String fileName;
+    private String fileHash;
+    private String previousHash;
+    private String currentHash;
+    private int index;
+    private String watermarkId;
+    private String watermarkedFilePath;
+    private Double similarityScore;
+    private boolean isProtected;
     private Date createdAt;
 }

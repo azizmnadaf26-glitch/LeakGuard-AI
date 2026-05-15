@@ -145,7 +145,9 @@ window.renderMyProperty = async function () {
           <div style="width:42px;height:42px;background:linear-gradient(135deg,#E8F4EE,#C8E6D9);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">
             ${icons[asset.category] || '📁'}
           </div>
-          <span class="badge badge-green" style="margin-right:25px;">Protected</span>
+          <span class="badge ${asset.protected ? 'badge-green' : 'badge-yellow'}" style="margin-right:25px;">
+            ${asset.protected ? 'Protected (Watermarked)' : 'Protection Pending'}
+          </span>
         </div>
         <div>
           <h3 style="margin:0 0 4px;color:var(--ink);font-size:1rem;font-family:'Syne',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${asset.title}">${asset.title}</h3>
@@ -157,8 +159,14 @@ window.renderMyProperty = async function () {
           <div><strong>Registered on:</strong> ${new Date(asset.createdAt).toLocaleDateString()}</div>
           <div><strong>Owner Name:</strong> ${currentName}</div>
         </div>
-        <div style="margin-top:auto;">
-          <button class="btn-outline" style="width:100%;justify-content:center;display:flex;font-size:12px;" onclick="toggleMoreInfo(${i})">Toggle Details</button>
+        <div style="margin-top:auto; display:flex; gap:8px;">
+          <button class="btn-outline" style="flex:1; justify-content:center; display:flex; font-size:12px;" onclick="toggleMoreInfo(${i})">Details</button>
+          <a href="${window.location.origin.replace('5173', '5000')}/${asset.watermarkedFilePath || 'uploads/watermarked_' + asset.fileName}" 
+             download="${asset.fileName}"
+             class="btn-primary" 
+             style="flex:1; font-size:12px; text-decoration:none; display:flex; align-items:center; justify-content:center;">
+             Download
+          </a>
         </div>
       </div>
     `).join('');

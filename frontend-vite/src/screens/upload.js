@@ -204,24 +204,33 @@ window.handleUpload = async function () {
     console.warn("Could not fetch owner name for upload", err);
   }
 
-  const newAsset = {
-    title,
-    category,
-    description: desc,
-    fileName,
-    walletAddress: wallet || null,
-    email: googleEmail || null,
-    ownerName,
-    createdAt: new Date()
-  };
+  const fileInput = document.getElementById('upload-file');
+  const file = fileInput.files[0];
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("title", title);
+  formData.append("category", category);
+  formData.append("description", desc);
+  if (wallet) formData.append("walletAddress", wallet);
+  if (googleEmail) formData.append("email", googleEmail);
+  formData.append("ownerName", ownerName);
 
   try {
-    await api("/api/assets/", {
+    const response = await fetch(`${window.location.origin.replace('5173', '8080')}/api/assets/`, {
       method: "POST",
-      body: JSON.stringify(newAsset)
+      body: formData
     });
 
-    alert('Asset uploaded and protected successfully!');
+    if (!response.ok) throw new Error("Server error during upload");
+    
+    const result = await response.json();
+    
+    if (result.protected) {
+      alert("Upload successful. File protected with invisible watermark.");
+    } else {
+      alert("Upload successful (AI protection pending).");
+    }
     
     // Sync UI after upload
     if (window.refreshUserAssets) {
